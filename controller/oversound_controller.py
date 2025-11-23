@@ -70,3 +70,26 @@ def unproc_content_error_handler(request: Request, exce: Exception):
     token = request.cookies.get("oversound_auth")
     userdata = obtain_user_data(token)
     return osv.get_error_view(request, userdata, "Te has columpiado", str(exce))
+
+@app.get("/label/create")
+def get_label_create(request: Request):
+    """
+    Ruta para la página de crear discográfica
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    if not userdata:
+        return RedirectResponse("/login")
+    
+    # Verificar si el usuario ya tiene una discográfica
+    try:
+        existing_label_resp = requests.get(f"{servers.TYA}/user/{userdata.get('userId')}/label", timeout=2, headers={"Accept": "application/json"})
+        if existing_label_resp.ok:
+            existing_label = existing_label_resp.json()
+            if existing_label:
+                return RedirectResponse(f"/label/{existing_label.get('id')}/edit")
+    except requests.RequestException:
+        pass
+    
+    return osv.get_label_create_view(request, None, userdata, servers.SYU)

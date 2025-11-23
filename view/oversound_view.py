@@ -8,3 +8,9 @@ class View():
 
     def __init__(self): 
         pass
+
+
+    # Renderizar la template de error
+    def get_error_view(self, request: Request, userdata: dict, error_message: str, error_details: str = ""):
+        data = {"userdata": userdata, "error_message": error_message, "error_details": error_details}
+        return templates.TemplateResponse("error.html", {"request": request, "data": data})

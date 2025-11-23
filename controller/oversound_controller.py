@@ -44,3 +44,14 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+
+
+
+
+@app.exception_handler(404)
+def unproc_content_error_handler(request: Request, exce: Exception):
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    return osv.get_error_view(request, userdata, "Te has columpiado", str(exce))

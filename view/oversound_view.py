@@ -61,3 +61,9 @@ class View():
     def get_album_view(self, request: Request, album_info : dict, tipoUsuario : int, isLiked: bool, inCarrito: bool, tiempo_formateado: str, userdata: dict = None, pt_server: str = None):
         data = {"userdata": userdata, "pt_server": pt_server}
         return templates.TemplateResponse("album.html", {"request": request, "data": data, "album": album_info, "tipoUsuario": tipoUsuario, "isLiked": isLiked, "inCarrito": inCarrito, "duracion_total": tiempo_formateado})
+    
+        # Renderizar la template merch.html
+    def get_merch_view(self, request: Request, merch_info : dict, tipoUsuario : int, isLiked: bool, inCarrito: bool, userdata: dict = None, syu_server: str = None):
+        data = {"userdata": userdata, "syu_server": syu_server, "merch": merch_info}
+        return templates.TemplateResponse("merch.html", {"request": request, "data": data, "tipoUsuario": tipoUsuario, "isLiked": isLiked, "inCarrito": inCarrito})
+    

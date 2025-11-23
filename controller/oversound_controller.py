@@ -803,3 +803,113 @@ async def process_purchase(request: Request):
     except requests.RequestException as e:
         print(f"Error procesando compra: {e}")
         return JSONResponse(content={"error": "No se pudo procesar la compra"}, status_code=500)
+
+@app.get("/album/{albumId}")
+def get_album(request: Request, albumId: int):
+    """
+    Ruta para mostrar un álbum específico desde la tienda
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    try:
+        # Obtener información del álbum
+        album_resp = requests.get(f"{servers.TYA}/album/{albumId}", timeout=2, headers={"Accept": "application/json"})
+        album_resp.raise_for_status()
+        album_data = album_resp.json()
+        
+        # Resolver artista principal del álbum
+        try:
+            artist_resp = requests.get(f"{servers.TYA}/artist/{album_data['artistId']}", timeout=2, headers={"Accept": "application/json"})
+            artist_resp.raise_for_status()
+            album_data['artist'] = artist_resp.json()
+        except requests.RequestException:
+            album_data['artist'] = {"artistId": album_data['artistId'], "artisticName": "Artista desconocido"}
+        
+        # Resolver géneros
+        genres = []
+        if album_data.get('genres'):
+            try:
+                genres_resp = requests.get(f"{servers.TYA}/genres", timeout=2, headers={"Accept": "application/json"})
+                genres_resp.raise_for_status()
+                all_genres = genres_resp.json()
+                genres = [g for g in all_genres if g['id'] in album_data['genres']]
+            except requests.RequestException:
+                pass
+        album_data['genres_data'] = genres
+        
+        # Resolver canciones del álbum usando /song/list
+        songs = []
+        if album_data.get('songs'):
+            try:
+                # Obtener todas las canciones en una sola petición
+                song_ids = ','.join(str(sid) for sid in album_data['songs'])
+                songs_resp = requests.get(f"{servers.TYA}/song/list?ids={song_ids}", timeout=2, headers={"Accept": "application/json"})
+                songs_resp.raise_for_status()
+                songs_list = songs_resp.json()
+                
+                # Resolver artistas de las canciones
+                for song_data in songs_list:
+                    try:
+                        song_artist_resp = requests.get(f"{servers.TYA}/artist/{song_data['artistId']}", timeout=2, headers={"Accept": "application/json"})
+                        song_artist_resp.raise_for_status()
+                        song_data['artist'] = song_artist_resp.json()
+                    except requests.RequestException:
+                        song_data['artist'] = {"artistId": song_data['artistId'], "artisticName": "Artista desconocido"}
+                    songs.append(song_data)
+            except requests.RequestException:
+                pass  # Si no se pueden cargar, dejar vacío
+        
+        # Ordenar canciones por albumOrder si existe (None se trata como 999 para ordenar al final)
+        songs = sorted(songs, key=lambda x: x.get('albumOrder') if x.get('albumOrder') is not None else 999)
+        album_data['songs_data'] = songs
+        
+        # Resolver álbumes relacionados del mismo artista usando el campo owner_albums del artista
+        related_albums = []
+        if album_data.get('artist') and album_data['artist'].get('owner_albums'):
+            try:
+                # Excluir el álbum actual y tomar máximo 6
+                related_ids = [aid for aid in album_data['artist']['owner_albums'] if aid != albumId][:6]
+                if related_ids:
+                    related_ids_str = ','.join(str(aid) for aid in related_ids)
+                    related_resp = requests.get(f"{servers.TYA}/album/list?ids={related_ids_str}", timeout=2, headers={"Accept": "application/json"})
+                    related_resp.raise_for_status()
+                    related_albums = related_resp.json()
+            except requests.RequestException:
+                pass  # Si no se pueden cargar, dejar vacío
+        album_data['related_albums'] = related_albums
+        
+        # Asegurarse de que el precio sea un número
+        try:
+            album_data['price'] = float(album_data.get('price', 0))
+        except ValueError:
+            album_data['price'] = 0.0
+        
+        # Calcular duración total del álbum
+        total_duration = 0
+        for song in songs:
+            if song.get('duration'):
+                try:
+                    total_duration += int(song['duration'])
+                except (ValueError, TypeError):
+                    pass  # Si no se puede convertir, ignorar
+        
+        # Formatear duración total
+        minutes = total_duration // 60
+        seconds = total_duration % 60
+        tiempo_formateado = f"{minutes}:{seconds:02d}"
+        
+        # Determinar si está en favoritos y carrito (por ahora False, implementar después)
+        isLiked = False
+        inCarrito = False
+        
+        # Determinar tipo de usuario (0: no autenticado, 1: usuario, 2: artista)
+        tipoUsuario = 0
+        if userdata:
+            tipoUsuario = 1  # TODO: Implementar lógica para distinguir artista
+        
+        return osv.get_album_view(request, album_data, tipoUsuario, isLiked, inCarrito, tiempo_formateado, userdata, servers.PT)
+        
+    except requests.RequestException as e:
+        # En caso de error, mostrar página de error
+        return osv.get_error_view(request, userdata, f"No se pudo cargar el álbum", str(e))

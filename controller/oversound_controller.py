@@ -564,3 +564,242 @@ def search_merch(q: str = Query(..., min_length=3)):
     except requests.RequestException as e:
         print(f"Error buscando merchandising: {e}")
         return JSONResponse(content=[], status_code=200)
+
+@app.get("/song/{songId}")
+def get_song(request: Request, songId: int):
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    try:
+        # Obtener información de la canción
+        song_resp = requests.get(f"{servers.TYA}/song/{songId}", timeout=2, headers={"Accept": "application/json"})
+        song_resp.raise_for_status()
+        song_data = song_resp.json()
+        
+        # Resolver artista principal
+        try:
+            artist_resp = requests.get(f"{servers.TYA}/artist/{song_data['artistId']}", timeout=2, headers={"Accept": "application/json"})
+            artist_resp.raise_for_status()
+            song_data['artist'] = artist_resp.json()
+        except requests.RequestException:
+            song_data['artist'] = {"artistId": song_data['artistId'], "nombre": "Artista desconocido"}
+        
+        # Resolver colaboradores
+        collaborators = []
+        if song_data.get('collaborators'):
+            for collab_id in song_data['collaborators']:
+                try:
+                    collab_resp = requests.get(f"{servers.TYA}/artist/{collab_id}", timeout=2, headers={"Accept": "application/json"})
+                    collab_resp.raise_for_status()
+                    collaborators.append(collab_resp.json())
+                except requests.RequestException:
+                    collaborators.append({"artistId": collab_id, "nombre": "Artista desconocido"})
+        song_data['collaborators_data'] = collaborators
+        
+        # Resolver géneros
+        genres = []
+        if song_data.get('genres'):
+            try:
+                genres_resp = requests.get(f"{servers.TYA}/genres", timeout=2, headers={"Accept": "application/json"})
+                genres_resp.raise_for_status()
+                all_genres = genres_resp.json()
+                genres = [g for g in all_genres if g['id'] in song_data['genres']]
+            except requests.RequestException:
+                pass
+        song_data['genres_data'] = genres
+        
+        # Resolver álbum original si existe
+        if song_data.get('albumId') is not None:
+            try:
+                album_resp = requests.get(f"{servers.TYA}/album/{song_data['albumId']}", timeout=2, headers={"Accept": "application/json"})
+                album_resp.raise_for_status()
+                album_data = album_resp.json()
+                
+                # Resolver artista del álbum
+                try:
+                    album_artist_resp = requests.get(f"{servers.TYA}/artist/{album_data['artistId']}", timeout=2, headers={"Accept": "application/json"})
+                    album_artist_resp.raise_for_status()
+                    album_data['artist'] = album_artist_resp.json()
+                except requests.RequestException:
+                    album_data['artist'] = {"artistId": album_data['artistId'], "nombre": "Artista desconocido"}
+                
+                song_data['original_album'] = album_data
+            except requests.RequestException:
+                song_data['original_album'] = None
+        else:
+            song_data['original_album'] = None
+        
+        # Resolver álbumes linkeados
+        linked_albums_data = []
+        if song_data.get('linked_albums'):
+            for linked_album_id in song_data['linked_albums']:
+                try:
+                    linked_album_resp = requests.get(f"{servers.TYA}/album/{linked_album_id}", timeout=2, headers={"Accept": "application/json"})
+                    linked_album_resp.raise_for_status()
+                    linked_album_data = linked_album_resp.json()
+                    
+                    # Resolver artista del álbum linkeado
+                    try:
+                        linked_artist_resp = requests.get(f"{servers.TYA}/artist/{linked_album_data['artistId']}", timeout=2, headers={"Accept": "application/json"})
+                        linked_artist_resp.raise_for_status()
+                        linked_album_data['artist'] = linked_artist_resp.json()
+                    except requests.RequestException:
+                        linked_album_data['artist'] = {"artistId": linked_album_data['artistId'], "nombre": "Artista desconocido"}
+                    
+                    linked_albums_data.append(linked_album_data)
+                except requests.RequestException:
+                    pass  # Ignorar álbumes que no se puedan cargar
+        song_data['linked_albums_data'] = linked_albums_data
+        
+        # Asegurarse de que el precio sea un número
+        try:
+            song_data['price'] = float(song_data.get('price', 0))
+        except ValueError:
+            song_data['price'] = 0.0
+        
+        # Determinar si está en favoritos y carrito (por ahora False, implementar después)
+        isLiked = False
+        inCarrito = False
+        
+        # Determinar tipo de usuario (0: no autenticado, 1: usuario, 2: artista)
+        tipoUsuario = 0
+        if userdata:
+            tipoUsuario = 1  # TODO: Implementar lógica para distinguir artista
+
+        metrics = None
+        try:
+            metrics_resp = requests.get(f"{servers.RYE}/statistics/metrics/song/{songId}", timeout=5)
+            metrics_resp.raise_for_status()
+            metrics_data = metrics_resp.json()
+            print(f"[DEBUG] Metrics response data: {metrics_data}")
+            metrics = {
+            "sales": metrics_data.get("sales", 0),
+            "downloads": metrics_data.get("downloads", 0),
+            "playbacks": metrics_data.get("playbacks", 0)
+            }
+        except requests.RequestException as e:
+            print(f"Error obteniendo métricas del artista: {e}")
+            metrics = {"playbacks": 0, "sales": 0, "downloads": 0}
+        
+        return osv.get_song_view(request, song_data, tipoUsuario, userdata, isLiked, inCarrito, servers.SYU, metrics, servers.TYA, servers.RYE, servers.PT)
+        
+    except requests.RequestException as e:
+        # En caso de error, mostrar página de error
+        print(e)
+        return osv.get_error_view(request, userdata, f"No se pudo cargar la canción", str(e))
+
+@app.get("/shop")
+def shop(request: Request, 
+         page: int = Query(default=1),
+         limit: int = Query(default=100)):
+    """
+    Renderiza la vista de la tienda.
+    Una sola llamada a TPP /store obtiene todo: productos, géneros y artistas.
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+
+    try:
+        # ===== UNA SOLA LLAMADA obtiene todo =====
+        store_resp = requests.get(
+            f"{servers.TPP}/store",
+            params={"page": page, "limit": limit},
+            timeout=30,
+            headers={"Accept": "application/json"}
+        )
+        store_resp.raise_for_status()
+        store_data = store_resp.json()
+        
+        # Extraer datos
+        productos = store_data.get("data", [])
+        pagination = store_data.get("pagination", {})
+        all_genres = store_data.get("genres", [])
+        all_artists = store_data.get("artists", [])
+        
+        print(f"[DEBUG] TPP Response: {len(productos)} productos, {len(all_genres)} géneros, {len(all_artists)} artistas")
+        
+    except requests.RequestException as e:
+        print(f"Error obteniendo tienda desde TPP: {e}")
+        productos = []
+        pagination = {}
+        all_genres = []
+        all_artists = []
+    except Exception as e:
+        print(f"Error inesperado en shop: {e}")
+        import traceback
+        traceback.print_exc()
+        productos = []
+        pagination = {}
+        all_genres = []
+        all_artists = []
+
+    # ===== CREAR MAPEOS para resolver IDs (manejo seguro) =====
+    artists_map = {}
+    for a in all_artists:
+        if isinstance(a, dict):
+            # Intentar obtener artistId con ambas notaciones
+            artist_id = a.get('artistId') or a.get('artist_id')
+            artist_name = a.get('artisticName') or a.get('artistic_name')
+            if artist_id and artist_name:
+                artists_map[artist_id] = artist_name
+    
+    genres_map = {}
+    for g in all_genres:
+        if isinstance(g, dict):
+            # Obtener id y name del género
+            genre_id = g.get('id') or g.get('genre_id')
+            genre_name = g.get('name') or g.get('genre_name')
+            if genre_id and genre_name:
+                genres_map[genre_id] = genre_name
+
+    # ===== SEPARAR por tipo (usando nombres de campo con guiones bajos) =====
+    songs = [p for p in productos if p.get('song_id', 0) not in [0, None]]
+    albums = [p for p in productos if p.get('album_id', 0) not in [0, None] and p.get('song_id', 0) in [0, None]]
+    merch = [p for p in productos if p.get('merch_id', 0) not in [0, None]]
+
+    print(f"[DEBUG] Shop: {len(songs)} songs, {len(albums)} albums, {len(merch)} merch")
+    print(f"[DEBUG] Shop: artists_map={len(artists_map)} items, genres_map={len(genres_map)} items")
+    if productos:
+        print(f"[DEBUG] Sample product keys: {list(productos[0].keys())}")
+        print(f"[DEBUG] Sample product artist field: {productos[0].get('artist')} (type: {type(productos[0].get('artist'))})")
+    if artists_map:
+        print(f"[DEBUG] Sample artists_map keys: {list(artists_map.keys())[:5]}")
+    if genres_map:
+        print(f"[DEBUG] Sample genres_map keys: {list(genres_map.keys())[:5]}")
+
+    return osv.get_shop_view(
+        request, userdata, 
+        songs, all_genres, all_artists, albums, merch,
+        artists_map, genres_map, servers.TYA
+    )
+
+@app.post("/purchase")
+async def process_purchase(request: Request):
+    """
+    Procesa una compra
+    Proxea la llamada a TPP POST /purchase
+    Body esperado: {cartId, paymentMethodId, shippingAddress}
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    if not userdata:
+        return JSONResponse(content={"error": "No autenticado"}, status_code=401)
+    
+    try:
+        body = await request.json()
+        # Agregar ID de usuario al body
+        body['userId'] = userdata.get('userId')
+        
+        # Enviar a TPP
+        purchase_resp = requests.post(
+            f"{servers.TPP}/purchase",
+            json=body,
+            timeout=5,
+            headers={"Accept": "application/json", "Cookie": f"oversound_auth={token}"}
+        )
+        purchase_resp.raise_for_status()
+        return JSONResponse(content=purchase_resp.json(), status_code=purchase_resp.status_code)
+    except requests.RequestException as e:
+        print(f"Error procesando compra: {e}")
+        return JSONResponse(content={"error": "No se pudo procesar la compra"}, status_code=500)

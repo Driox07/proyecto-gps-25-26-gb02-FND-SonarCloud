@@ -19,3 +19,9 @@ class View():
     def get_label_create_view(self, request: Request, label_info : dict = None, userdata: dict = None, syu_server: str = None):
         data = {"userdata": userdata, "syu_server": syu_server}
         return templates.TemplateResponse("label_create.html", {"request": request, "data": data, "label": label_info})
+    
+        # Renderizar la template label.html
+    def get_label_view(self, request: Request, label_info : dict, is_owner: bool, is_member: bool, userdata: dict = None, syu_server: str = None):
+        data = {"userdata": userdata, "syu_server": syu_server}
+        return templates.TemplateResponse("label.html", {"request": request, "data": data, "label": label_info, "is_owner": is_owner, "is_member": is_member})
+    

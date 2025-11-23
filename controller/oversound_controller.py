@@ -271,3 +271,110 @@ def get_artist_label(request: Request, artistId: int):
         "label": None,
         "is_owner": is_owner
     })
+
+
+@app.get("/label/{labelId}/edit")
+def get_label_edit(request: Request, labelId: int):
+    """
+    Ruta para editar una discográfica existente
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    if not userdata:
+        return RedirectResponse("/login")
+    
+    try:
+        # Obtener información de la discográfica
+        label_resp = requests.get(f"{servers.TYA}/label/{labelId}", timeout=2, headers={"Accept": "application/json"})
+        label_resp.raise_for_status()
+        label_data = label_resp.json()
+        
+        # Verificar que sea propietario
+        if label_data.get('ownerId') != userdata.get('userId'):
+            return osv.get_error_view(request, userdata, "No tienes permisos para editar esta discográfica", "")
+        
+        return osv.get_label_create_view(request, label_data, userdata, servers.SYU)
+        
+    except requests.RequestException as e:
+        print(e)
+        return osv.get_error_view(request, userdata, "No se pudo cargar la discográfica", str(e))
+    
+
+@app.put("/label/{labelId}/edit")
+async def update_label(request: Request, labelId: int):
+    """
+    Ruta para actualizar una discográfica
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    if not userdata:
+        return JSONResponse(content={"error": "No autenticado"}, status_code=401)
+    
+    try:
+        # Verificar que sea propietario
+        label_resp = requests.get(f"{servers.TYA}/label/{labelId}", timeout=2, headers={"Accept": "application/json"})
+        label_resp.raise_for_status()
+        label_data = label_resp.json()
+        
+        if label_data.get('ownerId') != userdata.get('userId'):
+            return JSONResponse(content={"error": "No tienes permisos"}, status_code=403)
+        
+        body = await request.json()
+        
+        # Actualizar la discográfica
+        update_resp = requests.put(
+            f"{servers.TYA}/label/{labelId}",
+            json=body,
+            timeout=2,
+            headers={"Accept": "application/json"}
+        )
+        
+        if update_resp.ok:
+            return JSONResponse(content={"message": "Discográfica actualizada"})
+        else:
+            error_data = update_resp.json()
+            return JSONResponse(content=error_data, status_code=update_resp.status_code)
+    
+    except Exception as e:
+        print(e)
+        return JSONResponse(content={"error": "Error al actualizar la discográfica"}, status_code=500)
+
+
+@app.delete("/label/{labelId}")
+async def delete_label(request: Request, labelId: int):
+    """
+    Ruta para eliminar una discográfica
+    """
+    token = request.cookies.get("oversound_auth")
+    userdata = obtain_user_data(token)
+    
+    if not userdata:
+        return JSONResponse(content={"error": "No autenticado"}, status_code=401)
+    
+    try:
+        # Verificar que sea propietario
+        label_resp = requests.get(f"{servers.TYA}/label/{labelId}", timeout=2, headers={"Accept": "application/json"})
+        label_resp.raise_for_status()
+        label_data = label_resp.json()
+        
+        if label_data.get('ownerId') != userdata.get('userId'):
+            return JSONResponse(content={"error": "No tienes permisos"}, status_code=403)
+        
+        # Eliminar la discográfica
+        delete_resp = requests.delete(
+            f"{servers.TYA}/label/{labelId}",
+            timeout=2,
+            headers={"Accept": "application/json"}
+        )
+        
+        if delete_resp.ok:
+            return JSONResponse(content={"message": "Discográfica eliminada"})
+        else:
+            error_data = delete_resp.json() if delete_resp.text else {}
+            return JSONResponse(content=error_data, status_code=delete_resp.status_code)
+    
+    except Exception as e:
+        print(e)
+        return JSONResponse(content={"error": "Error al eliminar la discográfica"}, status_code=500)

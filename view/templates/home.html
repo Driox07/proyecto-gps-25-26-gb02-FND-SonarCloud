@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OverSound — Tu plataforma musical</title>
+    <meta name="description" content="Descubre, crea y comparte música con OverSound. La plataforma para artistas y fans." />
+    <link rel="stylesheet" href="{{ url_for('static', path='styles/home.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', path='styles/header.css') }}"/>
+</head>
+<body>
+    {% include 'common/header.html' %}
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Donde la Música Cobra Vida</h1>
+            <p class="hero-subtitle">Descubre nuevos artistas, compra música exclusiva y merchandising único. La plataforma que conecta creadores con fans.</p>
+            <div class="hero-buttons">
+                <a href="/shop" class="btn btn-primary">Explorar Tienda</a>
+                <a href="/giftcard" class="btn btn-secondary">Tarjetas Regalo</a>
+            </div>
+        </div>
+        <div class="hero-decoration">
+            <div class="floating-card card-1">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-2c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="floating-card card-2">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z" stroke-width="2"/>
+                    <path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="floating-card card-3">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <section class="top-section">
+        <h2>Top 10 Canciones</h2>
+        <div id="top-songs" class="top-grid">
+            {% if data.top_songs and data.top_songs | length > 0 %}
+                {% for s in data.top_songs %}
+                    <div class="top-card">
+                        <img src="{{ (data.tya_server + '/static' + s.image) if s.image else '/static/img/utils/default-song.svg' }}" alt="{{ s.name or s.title or 'Canción' }}" />
+                        <p class="top-name">{{ s.name or s.title or 'Título desconocido' }}</p>
+                        <span class="top-meta">{{ s.genre or s.genreName or '' }}</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay canciones en el top.</p>
+            {% endif %}
+        </div>
+
+        <h2>Top 10 Artistas</h2>
+        <div id="top-artists" class="top-grid">
+            {% if data.top_artists and data.top_artists | length > 0 %}
+                {% for a in data.top_artists %}
+                    <div class="top-card">
+                        <img src="{{ (data.tya_server + '/static' + a.image) if a.image else '/static/img/utils/default-artist.svg' }}" alt="{{ a.name or a.artisticName or 'Artista' }}" />
+                        <p class="top-name">{{ a.name or a.artisticName or 'Nombre desconocido' }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay artistas en el top.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="top-section">
+        <h2>Recomendaciones para ti</h2>
+        <h3>Canciones</h3>
+        <div id="recommended-songs" class="top-grid">
+            {% if data.rec_songs and data.rec_songs | length > 0 %}
+                {% for s in data.rec_songs %}
+                    <div class="top-card">
+                        <img src="{{ (data.tya_server + '/static' + s.image) if s.image else '/static/img/utils/default-song.svg' }}" alt="{{ s.name or s.title or 'Canción' }}" />
+                        <p class="top-name">{{ s.name or s.title or 'Título desconocido' }}</p>
+                        <span class="top-meta">{{ s.genre or s.genreName or '' }}</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay recomendaciones de canciones por ahora.</p>
+            {% endif %}
+        </div>
+
+        <h3>Artistas</h3>
+        <div id="recommended-artists" class="top-grid">
+            {% if data.rec_artists and data.rec_artists | length > 0 %}
+                {% for a in data.rec_artists %}
+                    <div class="top-card">
+                        <img src="{{ (data.tya_server + '/static' + a.image) if a.image else '/static/img/utils/default-artist.svg' }}" alt="{{ a.name or a.artisticName or 'Artista' }}" />
+                        <p class="top-name">{{ a.name or a.artisticName or 'Nombre desconocido' }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No hay recomendaciones de artistas por ahora.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="features-container">
+            <h2 class="section-title">Todo lo que Necesitas en un Solo Lugar</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="8" r="5" stroke-width="2"/>
+                            <path d="M20 21a8 8 0 1 0-16 0" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Para Artistas</h3>
+                    <p>Publica tus canciones, álbumes y vende tu música. Conecta directamente con tus fans y monetiza tu talento.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="2" y="7" width="20" height="14" rx="2" stroke-width="2"/>
+                            <path d="M16 3v4M8 3v4M2 11h20" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Álbumes Completos</h3>
+                    <p>Explora colecciones completas de tus artistas favoritos. Compra álbumes y apoya a los creadores directamente.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="7" y1="7" x2="7.01" y2="7" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Merchandising</h3>
+                    <p>Compra productos exclusivos de tus artistas favoritos. Camisetas, vinilos, posters y mucho más.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="2" y="7" width="20" height="14" rx="2" stroke-width="2"/>
+                            <path d="M16 3v4M8 3v4M2 11h20" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3>Tarjetas Regalo</h3>
+                    <p>Regala música a tus amigos y familiares. Tarjetas regalo válidas para todo en nuestra tienda.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>¿Listo para Empezar?</h2>
+            <p>Únete a miles de artistas y fans que ya forman parte de OverSound</p>
+            <div class="cta-buttons">
+                <a href="/register" class="btn btn-white">Crear Cuenta Gratis</a>
+                <a href="/login" class="btn btn-outline">Ya Tengo Cuenta</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>OverSound</h3>
+                <p>La plataforma que conecta artistas con fans a través de la música.</p>
+            </div>
+            <div class="footer-section">
+                <h4>Plataforma</h4>
+                <ul>
+                    <li><a href="/shop">Tienda</a></li>
+                    <li><a href="/giftcard">Tarjetas Regalo</a></li>
+                    <li><a href="/">Inicio</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Soporte</h4>
+                <ul>
+                    <li><a href="/help">Centro de Ayuda</a></li>
+                    <li><a href="/contact">Contacto</a></li>
+                    <li><a href="/faq">Preguntas Frecuentes</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="/terms">Términos de Uso</a></li>
+                    <li><a href="/privacy">Privacidad</a></li>
+                    <li><a href="/cookies">Cookies</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 OverSound. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Home data rendered server-side by controller; no client-side fetches to RYE to avoid CORS -->
+</body>
+</html>

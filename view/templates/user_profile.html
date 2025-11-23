@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user.username }} - Perfil | OverSound</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles/user_profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='styles/header.css') }}">
+</head>
+<body>
+    {% include 'common/header.html' %}
+    
+    <main class="profile-main">
+        <!-- Profile Header Section -->
+        <section class="profile-header">
+            <div class="profile-header-content">
+                <div class="profile-image-container">
+                    {% if user.imagen %}
+                        <img src="{{ user.imagen }}" alt="{{ user.username }}" class="profile-image">
+                    {% else %}
+                        <div class="profile-image-placeholder">
+                            {{ user.username[0].upper() }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="profile-info">
+                    <h1 class="profile-nickname">{{ user.username }}</h1>
+                    <h2 class="profile-fullname">{{ user.name }} {{ user.firstLastName }} {{ user.secondLastName }}</h2>
+                    
+                    {% if user.biografia %}
+                        <p class="profile-bio">{{ user.biografia }}</p>
+                    {% else %}
+                        <p class="profile-bio empty">Sin biografía</p>
+                    {% endif %}
+                    
+                    <div class="profile-meta">
+                        <div class="meta-item">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2"></line>
+                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2"></line>
+                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"></line>
+                            </svg>    
+                            <p class="meta-line">Miembro desde {{ user.regDate }}</p>                       
+                        </div>
+                    </div>
+                    
+                    {% if is_own_profile %}
+                    <div class="profile-actions">
+                        <a href="/profile/edit" class="btn btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"></path>
+                            </svg>
+                            Editar Perfil
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Payment Methods Section -->
+        {% if is_own_profile %}
+        <section class="payment-methods-section">
+            <div class="payment-container">
+                <div class="payment-header">
+                    <div class="payment-title-group">
+                        <h2 class="payment-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke-width="2"></rect>
+                                <line x1="1" y1="10" x2="23" y2="10" stroke-width="2"></line>
+                            </svg>
+                            Métodos de Pago
+                        </h2>
+                        <p class="payment-subtitle">Gestiona tus métodos de pago de forma segura</p>
+                    </div>
+                    <button class="btn btn-primary add-payment-btn" id="add-payment-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="12" y1="5" x2="12" y2="19" stroke-width="2"></line>
+                            <line x1="5" y1="12" x2="19" y2="12" stroke-width="2"></line>
+                        </svg>
+                        Agregar Tarjeta
+                    </button>
+                </div>
+
+                <div class="payment-methods-grid" id="payment-methods-grid">
+                    <!-- Métodos de pago cargados dinámicamente -->
+                </div>
+
+                <!-- Payment Methods Modal -->
+                <div class="payment-modal-overlay" id="payment-modal-overlay">
+                    <div class="payment-modal">
+                        <div class="modal-header">
+                            <h3>Agregar Método de Pago</h3>
+                            <button class="modal-close" id="modal-close">×</button>
+                        </div>
+                        
+                        <form id="payment-form" class="payment-form">
+                            <div class="form-group">
+                                <label for="card-name">Nombre en la Tarjeta</label>
+                                <input type="text" id="card-name" placeholder="Juan García" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-number">Número de Tarjeta</label>
+                                <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="card-expiry">Vencimiento</label>
+                                    <input type="text" id="card-expiry" placeholder="MM/YY" maxlength="5" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="card-cvv">CVV</label>
+                                    <input type="text" id="card-cvv" placeholder="000" maxlength="3" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-type">Tipo de Tarjeta</label>
+                                <select id="card-type" required>
+                                    <option value="credit">Tarjeta de Crédito</option>
+                                    <option value="debit">Tarjeta de Débito</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group checkbox">
+                                <input type="checkbox" id="set-default" checked>
+                                <label for="set-default">Establecer como método por defecto</label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary full-width">Guardar Tarjeta</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Artist Section -->
+        <section class="artist-section" id="artist-section">
+            <div class="artist-container">
+                <div class="artist-header">
+                    <h2>Perfil de Artista</h2>
+                    <p class="artist-subtitle">Gestiona tu perfil de artista</p>
+                </div>
+                
+                <div class="artist-content" id="artist-content">
+                    <!-- Contenido cargado dinámicamente -->
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Cargando información...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Label Section -->
+        <section class="label-section" id="label-section">
+            <div class="label-container">
+                <div class="label-header">
+                    <h2>Discográfica</h2>
+                    <p class="label-subtitle">Gestiona tu discográfica</p>
+                </div>
+                
+                <div class="label-content" id="label-content">
+                    <div class="no-label">
+                        <div class="empty-state">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" stroke-width="2"></rect>
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" stroke-width="2"></path>
+                            </svg>
+                            <h3>Aún no tienes una discográfica</h3>
+                            <p>La funcionalidad de discográficas no está disponible actualmente.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Favorites Section -->
+        <section class="favorites-section">
+            <div class="favorites-container">
+                
+                <!-- Canciones Favoritas -->
+                <div class="favorites-category">
+                    <div class="category-header">
+                        <h2 class="category-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-2c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" stroke-width="2"/>
+                            </svg>
+                            Canciones Favoritas
+                        </h2>
+                        <span class="category-count">{{ canciones_favoritas|length if canciones_favoritas else 0 }}</span>
+                    </div>
+                    
+                    <div class="favorites-grid">
+                        {% if canciones_favoritas %}
+                            {% for cancion in canciones_favoritas %}
+                                <div class="favorite-card">
+                                    <div class="card-image">
+                                        {% if cancion.cover %}
+                                            <img src="{{ cancion.cover }}" alt="{{ cancion.title }}">
+                                        {% else %}
+                                            <div class="card-image-placeholder">
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-2c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" stroke-width="2"/>
+                                                </svg>
+                                            </div>
+                                        {% endif %}
+                                        <div class="card-overlay">
+                                            <button class="play-button">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-content">
+                                        <h3 class="card-title">{{ cancion.title }}</h3>
+                                        <p class="card-subtitle">{{ cancion.artist.artisticName if cancion.artist else 'Artista Desconocido' }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-2c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z" stroke-width="2"/>
+                                </svg>
+                                <p>No tienes canciones favoritas aún</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Álbumes Favoritos -->
+                <div class="favorites-category">
+                    <div class="category-header">
+                        <h2 class="category-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                                <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                            </svg>
+                            Álbumes Favoritos
+                        </h2>
+                        <span class="category-count">{{ albumes_favoritos|length if albumes_favoritos else 0 }}</span>
+                    </div>
+                    
+                    <div class="favorites-grid">
+                        {% if albumes_favoritos %}
+                            {% for album in albumes_favoritos %}
+                                <div class="favorite-card">
+                                    <div class="card-image">
+                                        {% if album.cover %}
+                                            <img src="{{ album.cover }}" alt="{{ album.title }}">
+                                        {% else %}
+                                            <div class="card-image-placeholder">
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                                                    <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                                                </svg>
+                                            </div>
+                                        {% endif %}
+                                        <div class="card-overlay">
+                                            <button class="play-button">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-content">
+                                        <h3 class="card-title">{{ album.title }}</h3>
+                                        <p class="card-subtitle">{{ album.artist.artisticName if album.artist else 'Artista Desconocido' }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                                    <circle cx="12" cy="12" r="3" stroke-width="2"></circle>
+                                </svg>
+                                <p>No tienes álbumes favoritos aún</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Artistas Favoritos -->
+                <div class="favorites-category">
+                    <div class="category-header">
+                        <h2 class="category-title">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-width="2"></path>
+                                <circle cx="12" cy="7" r="4" stroke-width="2"></circle>
+                            </svg>
+                            Artistas Favoritos
+                        </h2>
+                        <span class="category-count">{{ artistas_favoritos|length if artistas_favoritos else 0 }}</span>
+                    </div>
+                    
+                    <div class="favorites-grid">
+                        {% if artistas_favoritos %}
+                            {% for artista in artistas_favoritos %}
+                                <div class="favorite-card artist-card">
+                                    <div class="card-image artist-image">
+                                        {% if artista.artisticImage %}
+                                            <img src="{{ artista.artisticImage }}" alt="{{ artista.artisticName }}">
+                                        {% else %}
+                                            <div class="card-image-placeholder">
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-width="2"></path>
+                                                    <circle cx="12" cy="7" r="4" stroke-width="2"></circle>
+                                                </svg>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-content">
+                                        <h3 class="card-title">{{ artista.artisticName }}</h3>
+                                        <p class="card-subtitle">Artista</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-width="2"></path>
+                                    <circle cx="12" cy="7" r="4" stroke-width="2"></circle>
+                                </svg>
+                                <p>No tienes artistas favoritos aún</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Danger Zone Section -->
+        {% if is_own_profile %}
+        <section class="danger-zone-section">
+            <div class="danger-zone-container">
+                <div class="danger-zone-header">
+                    <h2 class="danger-zone-title">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"></path>
+                            <line x1="12" y1="9" x2="12" y2="13" stroke-width="2"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"></line>
+                        </svg>
+                        Zona Peligrosa
+                    </h2>
+                    <p class="danger-zone-subtitle">Las acciones en esta sección son irreversibles</p>
+                </div>
+                
+                <div class="danger-zone-content">
+                    <div class="danger-action">
+                        <div class="danger-action-info">
+                            <h3>Eliminar cuenta permanentemente</h3>
+                            <p>Una vez eliminada tu cuenta, no hay vuelta atrás. Por favor, está seguro.</p>
+                        </div>
+                        <button class="btn btn-danger" id="delete-account-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="3 6 5 6 21 6" stroke-width="2"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2"></path>
+                            </svg>
+                            Borrar Cuenta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Delete Account Confirmation Modal -->
+        <div class="modal-overlay" id="delete-modal-overlay">
+            <div class="modal danger-modal">
+                <div class="modal-header">
+                    <h3>¿Estás absolutamente seguro?</h3>
+                    <button class="modal-close" id="delete-modal-close">×</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="warning-message">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-width="2"></path>
+                            <line x1="12" y1="9" x2="12" y2="13" stroke-width="2"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="2"></line>
+                        </svg>
+                        <p><strong>Esta acción no se puede deshacer.</strong> Esto eliminará permanentemente tu cuenta <strong>{{ user.username }}</strong> y todos tus datos asociados.</p>
+                    </div>
+                    
+                    <form id="delete-account-form">
+                        <div class="form-group">
+                            <label for="confirm-username">Por favor escribe <strong>{{ user.username }}</strong> para confirmar</label>
+                            <input type="text" id="confirm-username" placeholder="Escribe tu nombre de usuario" required autocomplete="off">
+                        </div>
+
+                        <div class="modal-actions">
+                            <button type="button" class="btn btn-secondary" id="cancel-delete-btn">Cancelar</button>
+                            <button type="submit" class="btn btn-danger" id="confirm-delete-btn">Entiendo las consecuencias, eliminar mi cuenta</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <script>
+        // Configuración de servidores para JavaScript
+        window.SERVER_CONFIG = {
+            SYU: "{{ syu_server if syu_server else '' }}",
+            TYA: "{{ tya_server if tya_server else '' }}"
+        };
+    </script>
+    <script>
+        const SYU_URL = '{{ syu_server }}';
+        const TYA_URL = '{{ tya_server }}';
+        const PT_URL = '{{ pt_server }}';
+        const TPP_SERVER = '{{ tpp_server }}';
+    </script>
+    <script src="{{ url_for('static', path='js/config.js') }}"></script>
+    <script src="{{ url_for('static', path='js/UserProfile.js') }}"></script>
+    
+    <!-- Delete Account Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const deleteBtn = document.getElementById('delete-account-btn');
+            const deleteModal = document.getElementById('delete-modal-overlay');
+            const closeModal = document.getElementById('delete-modal-close');
+            const cancelBtn = document.getElementById('cancel-delete-btn');
+            const deleteForm = document.getElementById('delete-account-form');
+            const confirmInput = document.getElementById('confirm-username');
+            const expectedUsername = "{{ user.username }}";
+            
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    deleteModal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+            
+            function closeDeleteModal() {
+                deleteModal.classList.remove('show');
+                document.body.style.overflow = '';
+                confirmInput.value = '';
+            }
+            
+            if (closeModal) {
+                closeModal.addEventListener('click', closeDeleteModal);
+            }
+            
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', closeDeleteModal);
+            }
+            
+            if (deleteModal) {
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) {
+                        closeDeleteModal();
+                    }
+                });
+            }
+            
+            if (deleteForm) {
+                deleteForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const username = confirmInput.value.trim();
+                    if (username !== expectedUsername) {
+                        alert('El nombre de usuario no coincide. Por favor, verifica e intenta nuevamente.');
+                        return;
+                    }
+                    
+                    const confirmBtn = document.getElementById('confirm-delete-btn');
+                    confirmBtn.disabled = true;
+                    confirmBtn.textContent = 'Eliminando...';
+                    
+                    try {
+                        const userId = window.userData.userId;
+                        const token = getCookie('oversound_auth');
+                        
+                        const response = await fetch(`${window.SERVER_CONFIG.SYU}/user/${userName}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Cookie': `oversound_auth=${token}`
+                            },
+                            credentials: 'include'
+                        });
+                        
+                        if (response.ok) {
+                            alert('Tu cuenta ha sido eliminada exitosamente. Serás redirigido a la página de inicio.');
+                            // Eliminar cookie y redirigir
+                            document.cookie = 'oversound_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                            window.location.href = '/';
+                        } else {
+                            const errorData = await response.json().catch(() => ({}));
+                            alert(`Error al eliminar la cuenta: ${errorData.message || 'Error desconocido'}`);
+                            confirmBtn.disabled = false;
+                            confirmBtn.textContent = 'Entiendo las consecuencias, eliminar mi cuenta';
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error de conexión al intentar eliminar la cuenta. Por favor, intenta nuevamente.');
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = 'Entiendo las consecuencias, eliminar mi cuenta';
+                    }
+                });
+            }
+            
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            }
+        });
+    </script>
+</body>
+</html>

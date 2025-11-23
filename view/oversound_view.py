@@ -261,6 +261,11 @@ class View():
         data = {"userdata": userdata, "syu_server": syu_server}
         return templates.TemplateResponse("label_create.html", {"request": request, "data": data, "label": label_info})
     
+    # Renderizar la template giftcard.html
+    def get_giftcard_view(self, request: Request, userdata: dict, syu_server: str = None):
+        data = {"userdata": userdata, "syu_server": syu_server}
+        return templates.TemplateResponse("giftcard.html", {"request": request, "data": data})
+
     # Renderizar la template artist_create.html
     def get_artist_create_view(self, request: Request, userdata: dict = None, syu_server: str = None):
         data = {"userdata": userdata, "syu_server": syu_server}

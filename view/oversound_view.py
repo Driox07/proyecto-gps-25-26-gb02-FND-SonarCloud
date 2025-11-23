@@ -56,3 +56,8 @@ class View():
     # Renderizar la template purchased.html
     def get_purchased_view(self, request: Request, user, songs):
         return templates.TemplateResponse("shop/purchased.html", {"request": request, "usuario": user, "songs": songs})
+    
+     # Renderizar la template album.html
+    def get_album_view(self, request: Request, album_info : dict, tipoUsuario : int, isLiked: bool, inCarrito: bool, tiempo_formateado: str, userdata: dict = None, pt_server: str = None):
+        data = {"userdata": userdata, "pt_server": pt_server}
+        return templates.TemplateResponse("album.html", {"request": request, "data": data, "album": album_info, "tipoUsuario": tipoUsuario, "isLiked": isLiked, "inCarrito": inCarrito, "duracion_total": tiempo_formateado})
